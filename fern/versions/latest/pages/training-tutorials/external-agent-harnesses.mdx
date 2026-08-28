@@ -74,6 +74,25 @@ Each rollout's model calls are stitched into a single Responses payload with con
 
 The loss mask follows from this structure instead of being sent separately. Prompt positions provide context. Generation positions are trainable.
 
+### Training-ready samples
+
+Rebuilding also attaches a `training_sample` field to each built rollout. Harness-side semantics that a downstream RL trainer cannot recover from flat samples are attached at the capture boundary, right after chain building. The field is `null` when the rebuilt response carried no generated tokens.
+
+| Key | Contents |
+|---|---|
+| `rollout_id` | The rollout that produced the sample. |
+| `input_ids` | The flattened contiguous token sequence: the first prompt plus every generation. |
+| `loss_mask` | 0 on prompt positions, 1 on generated positions. |
+| `log_probs` | Captured log probabilities on generated positions, 0 elsewhere. |
+| `loss_weights` | Rollout-level token-mean weights: each generated token weighs `1 / N`, where `N` is the rollout's generated-token count, so long and short rollouts contribute equally to the loss. |
+| `n_generated_tokens` | `N`, the count of generated tokens. |
+
+The reward and advantage group are rollout-batch concerns; assign them per rollout before batch assembly. Three helpers exported from `nemo_gym.token_id_capture` cover the batch-level steps:
+
+- `build_training_sample(rollout_id, response)` builds one sample from a rebuilt rollout response and returns `None` when the response has no generated tokens.
+- `group_advantages(samples)` computes advantages against group-mean baselines. Each sample needs `reward`, `group_id`, and `masked`. Masked samples are excluded from their group's baseline and receive zero advantage.
+- `dedup_identical_samples(samples)` drops samples whose flattened token sequence already appears in the batch, keeping the first occurrence. Samples that share a prompt but differ in generation are kept.
+
 ## What to watch on a first run
 
 Read these metrics before the reward curve. A rollout can appear healthy because its reward changes even when most of the rollout never reaches training.
