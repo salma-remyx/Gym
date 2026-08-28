@@ -77,6 +77,13 @@ from nemo_gym.token_id_capture.sink import (
     set_token_sink,
 )
 from nemo_gym.token_id_capture.store import TokenCaptureStore, make_token_store, validate_rollout_id
+from nemo_gym.token_id_capture.training_sample import (
+    TRAINING_SAMPLE_KEY,
+    build_training_sample,
+    dedup_identical_samples,
+    flatten_projected_tokens,
+    group_advantages,
+)
 
 
 __all__ = [
@@ -113,4 +120,9 @@ __all__ = [
     "clear_token_captures_for_rollouts",
     "trajectories_from_source",
     "token_id_capture_dirs_from_config",
+    "TRAINING_SAMPLE_KEY",
+    "build_training_sample",
+    "dedup_identical_samples",
+    "flatten_projected_tokens",
+    "group_advantages",
 ]
