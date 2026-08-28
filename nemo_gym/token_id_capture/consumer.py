@@ -42,6 +42,7 @@ from nemo_gym.token_id_capture.protocols import TokenSource
 from nemo_gym.token_id_capture.records import TokenEntry
 from nemo_gym.token_id_capture.store import TokenCaptureStore
 from nemo_gym.token_id_capture.terminal import TerminalAttribution, resolve_terminal
+from nemo_gym.token_id_capture.training_sample import TRAINING_SAMPLE_KEY, build_training_sample
 
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,7 @@ def _failed_build(rollout_id: str, builder: str, error: str, *, n_calls: int = 0
         "rollout_id": rollout_id,
         "builder": builder,
         "rebuilt_response": None,
+        TRAINING_SAMPLE_KEY: None,
         "mask_sample": True,
         "error": error,
         "metrics": {"n_calls": n_calls},
@@ -180,6 +182,11 @@ def _assemble(
         "empty_generation_calls": len(notes.empty_generation_calls),
     }
     unresolved = notes.unresolved_retries
+    # Attach the training-ready sample at the capture boundary.
+    # Rollout-level token-mean loss weights cannot be recovered by a
+    # downstream trainer from flat samples. ``None`` means the rebuilt
+    # response carried no generated tokens.
+    training_sample = build_training_sample(rollout_id, response)
     if notes.terminal_chain == "delivered":
         # The verified chain is attributed and intact.
         # Off-path calls (auxiliary calls, sub-agent forks, abandoned retries)
@@ -198,6 +205,7 @@ def _assemble(
         "rollout_id": rollout_id,
         "builder": builder,
         "rebuilt_response": response,
+        TRAINING_SAMPLE_KEY: training_sample,
         "metrics": metrics,
         "mask_sample": mask,
         "unresolved_retries": list(unresolved),
